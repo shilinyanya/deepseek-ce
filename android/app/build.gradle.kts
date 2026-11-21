@@ -42,6 +42,8 @@ android {
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // FileProvider 直接来自 androidx.core，显式声明避免依赖树变化时编译失败
+    implementation("androidx.core:core-ktx:1.13.1")
     // WebViewAssetLoader：用 https://appassets.androidplatform.net/ 这个安全来源提供本地资源
     implementation("androidx.webkit:webkit:1.11.0")
 }

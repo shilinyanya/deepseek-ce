@@ -8,6 +8,7 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+android/keystore.properties
 
 # 安装包与压缩包走 GitHub Releases，不进仓库历史
 *.apk

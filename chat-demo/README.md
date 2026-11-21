@@ -1,5 +1,8 @@
 # chat-demo
 
+> 本目录是上游 [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo) 的原文。
+> 本项目相对上游的改动、构建与打包方式见根目录 [README](../README.md)。
+
 English | [简体中文](README.zh-CN.md)
 
 A static chat demo powered by the DeepSeek API. No application backend is required: the browser connects directly to the configured API service.

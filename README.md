@@ -31,15 +31,15 @@
 
 | 方式 | 地址 | 说明 |
 | --- | --- | --- |
-| **在线使用** | [shilinyanya.github.io/deepseek-web-unofficial](https://shilinyanya.github.io/deepseek-web-unofficial/) | 点开就用，免安装 |
+| **在线使用** | [shilinyanya.github.io/deepseek-ce](https://shilinyanya.github.io/deepseek-ce/) | 点开就用，免安装 |
 | **离线包** | [Releases 页面下载](../../releases/latest)（1.8 MB） | 解压后双击 `index.html`，纯静态、不需要服务器 |
 
 ### 💻 源码
 
 | 方式 | 地址 |
 | --- | --- |
-| 打包下载 | [Download ZIP](https://github.com/shilinyanya/deepseek-web-unofficial/archive/refs/heads/main.zip)（GitHub 自动生成，永远是最新代码） |
-| 克隆 | `git clone git@github.com:shilinyanya/deepseek-web-unofficial.git` |
+| 打包下载 | [Download ZIP](https://github.com/shilinyanya/deepseek-ce/archive/refs/heads/main.zip)（GitHub 自动生成，永远是最新代码） |
+| 克隆 | `git clone git@github.com:shilinyanya/deepseek-ce.git` |
 
 ---
 
@@ -121,7 +121,7 @@ node tools/serve-dist.mjs chat-demo/dist 8091
 
 ### 开发
 
-```powershell
+```bash
 cd chat-demo
 pnpm install
 pnpm dev          # http://localhost:8090
@@ -228,7 +228,16 @@ Key 存在浏览器 localStorage，会话和附件存在 IndexedDB，**不经过
 每次有新改动，`android/app/build.gradle.kts` 里的 `versionCode` / `versionName` 会一起往上加，
 根目录的 APK 文件名也跟着改，避免分不清装的是哪一版。
 
+```bash
+# Linux / macOS
+export ANDROID_HOME="$HOME/Android/Sdk"
+cd android
+./gradlew assembleRelease        # 产物：app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
 ```powershell
+# Windows
 . E:\AndroidDev\env.ps1          # ANDROID_HOME / GRADLE_USER_HOME / JAVA_HOME
 cd android
 .\gradlew.bat assembleRelease    # 产物：app/build/outputs/apk/release/app-release.apk
@@ -237,7 +246,14 @@ adb install -r app\build\outputs\apk\release\app-release.apk
 
 改了网页之后要先把新产物同步进 assets，再重新打包：
 
+```bash
+cd chat-demo && pnpm build
+# Linux / macOS
+rm -rf ../android/app/src/main/assets/www && cp -r dist ../android/app/src/main/assets/www
+```
+
 ```powershell
+# Windows
 cd chat-demo; pnpm build
 robocopy chat-demo\dist android\app\src\main\assets\www /MIR
 ```
@@ -290,7 +306,7 @@ IndexedDB 会被限制）、转发 `<input type="file">` 选择器、授权麦�
 - 附件上传（含拖拽、粘贴）、图片理解、文档版面解析
 - 语音输入（实时频谱）与回复朗读（海星 / 暗潮两档音色）
 - Markdown、代码高亮与复制、KaTeX 公式、Mermaid 图表
-- 简体中文 / English、浅色 / 深色 / 跟随系统、移动端布局
+- 简体中文 / 繁體中文 / 日本語 / English、浅色 / 深色 / 跟随系统、移动端布局
 - 位置与时间上下文、历史记录 ZIP 导入导出、一键清空
 
 ## 验证脚本
