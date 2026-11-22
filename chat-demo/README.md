@@ -1,7 +1,6 @@
 # chat-demo
 
-> 本目录是上游 [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo) 的原文。
-> 本项目相对上游的改动、构建与打包方式见根目录 [README](../README.md)。
+> **Note:** This directory is the unmodified upstream `deepseek-ai/chat-demo` source. Our changes are summarized in the repository root [README.md](../README.md).
 
 English | [简体中文](README.zh-CN.md)
 

@@ -18,7 +18,7 @@
 <sub>手机扫码安装</sub>
 </td>
 <td>
-<h3><a href="../../releases/latest">⬇ 下载 DeepSeek CE 3.1.4（安卓 APK）</a></h3>
+<h3><a href="../../releases/latest">⬇ 下载最新版（安卓 APK）</a></h3>
 <code>10.3 MB</code> · Android 10+（API 29 起）· 直接覆盖安装，聊天记录不丢<br>
 <sub>桌面图标名字是 <b>DeepSeek CE</b>（Community Edition / 非官方社区版）</sub>
 </td>
@@ -130,6 +130,9 @@ pnpm type         # TypeScript 检查
 pnpm lint         # oxlint
 ```
 
+构建脚本是 POSIX 写法（`rm -rf dist && NODE_ENV=production rspack build`），
+Windows 下请用 WSL/Git Bash 或把命令换成 `rspack build --mode production`。
+
 ### 接自己的 API
 
 打开「设置 → 数据管理」填入 API Key（`platform.deepseek.com` 申请），
@@ -169,7 +172,8 @@ Key 存在浏览器 localStorage，会话和附件存在 IndexedDB，**不经过
    官方新模型上线后接口里出现就能刷出来。
 6. **侧边栏升级**：加了搜索框（标题 + 正文都能搜，正文命中显示上下文片段）、
    置顶分组（会话菜单里置顶/取消置顶，独立分组可折叠）、多选模式
-   （右上勾选进入，可全选后批量删除）。会话标题永远显示在官方名 `DeepSeek` 下，
+   （标题栏「选择对话」+ 已选数量，列表项圆形勾选；底部「置顶 / 取消置顶、导出、删除」，
+   每个操作都有确认弹窗）。会话标题永远显示在官方名 `DeepSeek` 下，
    不再是 "API 使用 demo"。
 7. **界面语言四选一**：简体中文 / 繁體中文 / 日本語 / English。
    首次打开按浏览器语言自动选（`zh-Hant/zh-HK` → 繁中，`ja` → 日文），之后跟随设置。
@@ -192,10 +196,10 @@ Key 存在浏览器 localStorage，会话和附件存在 IndexedDB，**不经过
    现在这些内容照常留在原地，另加一条「服务端在这里中断了这次生成」的提示，
    重新生成也不再被禁用。拒绝轮次依然**不回传上下文**（`isUsableReply`），
    导入/导出同步保留正文，不再重复追加模板。
-11. **不再主动申请 high 档审核**（2.1）：请求体里的 `safety_check` 由常量改成可关的开关，
-   默认不发（`store.ts` 里的 `SAFETY_CHECK = null`）。代价是 `deepseek_web_search` /
-   `deepseek_read_url` 依赖的「扩展模式」可能一起失效——智能搜索/读链接异常时，
-   把那个常量改回 `{ level: 'high' }` 即可恢复。
+11. **联网工具需要 high 档扩展模式**：`deepseek_web_search` / `deepseek_read_url`
+   依赖请求里的 `safety_check: { level: 'high' }`（官方网页端同款）。现在默认就发
+   high 档（`store.ts` 里的 `SAFETY_CHECK = { level: 'high' }`），联网搜索和读链接因此可用；
+   代价是内容审核档位更高。想要严格审核优先、放弃联网工具，把常量改回 `null` 即可。
 12. **导入大归档不再像卡死**（2.2）：导入历史对话时弹出「正在导入，请勿退出」遮罩，
     带进度条、`已处理 n / N 个条目` 和百分比；中央目录读完之前显示「正在读取归档…」，
     导入期间设置弹窗不可关闭。
@@ -228,16 +232,7 @@ Key 存在浏览器 localStorage，会话和附件存在 IndexedDB，**不经过
 每次有新改动，`android/app/build.gradle.kts` 里的 `versionCode` / `versionName` 会一起往上加，
 根目录的 APK 文件名也跟着改，避免分不清装的是哪一版。
 
-```bash
-# Linux / macOS
-export ANDROID_HOME="$HOME/Android/Sdk"
-cd android
-./gradlew assembleRelease        # 产物：app/build/outputs/apk/release/app-release.apk
-adb install -r app/build/outputs/apk/release/app-release.apk
-```
-
 ```powershell
-# Windows
 . E:\AndroidDev\env.ps1          # ANDROID_HOME / GRADLE_USER_HOME / JAVA_HOME
 cd android
 .\gradlew.bat assembleRelease    # 产物：app/build/outputs/apk/release/app-release.apk
@@ -246,14 +241,7 @@ adb install -r app\build\outputs\apk\release\app-release.apk
 
 改了网页之后要先把新产物同步进 assets，再重新打包：
 
-```bash
-cd chat-demo && pnpm build
-# Linux / macOS
-rm -rf ../android/app/src/main/assets/www && cp -r dist ../android/app/src/main/assets/www
-```
-
 ```powershell
-# Windows
 cd chat-demo; pnpm build
 robocopy chat-demo\dist android\app\src\main\assets\www /MIR
 ```
@@ -303,11 +291,15 @@ IndexedDB 会被限制）、转发 `<input type="file">` 选择器、授权麦�
 
 - 多会话、自动起标题、重命名、删除；编辑提问、重新生成、切换回答分支
 - 流式输出、深度思考、智能搜索、链接阅读与来源引用、停止与续写
+- 多选会话：置顶/取消置顶、导出选中会话、批量删除（均带确认）
 - 附件上传（含拖拽、粘贴）、图片理解、文档版面解析
 - 语音输入（实时频谱）与回复朗读（海星 / 暗潮两档音色）
 - Markdown、代码高亮与复制、KaTeX 公式、Mermaid 图表
 - 简体中文 / 繁體中文 / 日本語 / English、浅色 / 深色 / 跟随系统、移动端布局
-- 位置与时间上下文、历史记录 ZIP 导入导出、一键清空
+- 位置与时间上下文、历史记录 ZIP 导入导出（导入可取消、导出有进度和终止）、
+  导出目录可选并支持恢复默认、一键清空
+- 实验性：自定义联网模型（当前模型不支持工具时用指定模型检索）、标题生成二选一
+  （官方新接口 / 回退额外请求）、手动压缩上下文与压缩进度提示
 
 ## 验证脚本
 

@@ -1,5 +1,7 @@
 # chat-demo
 
+> **说明：** 本目录是上游 `deepseek-ai/chat-demo` 的原文；我们的改动汇总在仓库根目录 [README.md](../README.md)。
+
 [English](README.md) | 简体中文
 
 基于 DeepSeek API 的静态聊天示例。无需应用后端，浏览器直接请求配置的 API 服务。
