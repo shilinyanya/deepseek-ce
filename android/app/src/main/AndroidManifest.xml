@@ -3,11 +3,14 @@
 
     <!-- 对话、附件上传、语音都走 https://api.deepseek.com -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 长按列表项时的触感反馈 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- 语音输入（网页里 getUserMedia 录音） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"

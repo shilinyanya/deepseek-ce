@@ -3,6 +3,8 @@ package com.linyan.deepseek
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -21,6 +23,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.view.inputmethod.InputMethodManager
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.MimeTypeMap
@@ -61,7 +64,7 @@ import java.io.File
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var webView: WebView
+    private lateinit var webView: BackAwareWebView
     private lateinit var errorBox: View
     private lateinit var errorText: TextView
     private lateinit var statusBox: View
@@ -112,6 +115,19 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webview)
+        // 键盘打开时返回键走 onKeyPreIme，在这里交给网页处理
+        webView.onBackPreIme = {
+            Log.d("DSH-DEBUG", "[native] back pre-ime")
+            webView.evaluateJavascript("window.__dsBack ? window.__dsBack() : false") { result ->
+                if (result?.trim('"') != "true") {
+                    if (webView.canGoBack()) {
+                        webView.goBack()
+                    } else {
+                        finish()
+                    }
+                }
+            }
+        }
         errorBox = findViewById(R.id.errorBox)
         errorText = findViewById(R.id.errorText)
         statusBox = findViewById(R.id.statusBox)
@@ -141,19 +157,47 @@ class MainActivity : AppCompatActivity() {
             WebView.setWebContentsDebuggingEnabled(true)
         }
         webView.addJavascriptInterface(Bridge(), "AndroidBridge")
-        webView.loadUrl(APP_URL)
+        webView.loadUrl("$APP_URL?v=${BuildConfig.BUILD_STAMP}")
         // 老内核上网页可能一个字都跑不起来，那边连错误都显示不了；
         // 这里在原生侧兜一层，超时就先把 WebView 版本和 UA 摊在屏幕上。
         startupHandler.postDelayed(startupWatchdog, 12000)
 
+        // Android 13+ 的返回手势走 OnBackInvoked，旧的 onBackPressed 回调收不到
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                Log.d("DSH-DEBUG", "[native] back invoked")
+                webView.evaluateJavascript(
+                    "window.__dsBack ? window.__dsBack() : false"
+                ) { result ->
+                    if (result?.trim('"') != "true") {
+                        if (webView.canGoBack()) {
+                            webView.goBack()
+                        } else {
+                            finish()
+                        }
+                    }
+                }
+            }
+        }
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    if (webView.canGoBack()) {
-                        webView.goBack()
-                    } else {
-                        finish()
+                    Log.d("DSH-DEBUG", "[native] back received")
+                    // 先让网页决定：设置、搜索页、抽屉要逐级退出
+                    webView.evaluateJavascript(
+                        "window.__dsBack ? window.__dsBack() : false"
+                    ) { result ->
+                        if (result?.trim('"') == "true") {
+                            return@evaluateJavascript
+                        }
+                        if (webView.canGoBack()) {
+                            webView.goBack()
+                        } else {
+                            finish()
+                        }
                     }
                 }
             }
@@ -696,6 +740,43 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { applySystemBarColor(parsed) }
         }
 
+        /** 临时调试通道：网页把诊断信息写进 logcat */
+        @JavascriptInterface
+        fun debugLog(message: String) {
+            Log.e("DSH-DEBUG", message)
+        }
+
+        /** 网页里点侧栏等操作时，清掉 WebView 里残留的文字选择和系统工具条 */
+        @JavascriptInterface
+        fun clearSelection() {
+            runOnUiThread {
+                webView.evaluateJavascript(
+                    "window.getSelection && window.getSelection().removeAllRanges()",
+                    null,
+                )
+            }
+        }
+
+        /** 读取系统剪贴板文本，供设置页的「粘贴」按钮使用 */
+        @JavascriptInterface
+        fun readClipboard(): String {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = clipboard.primaryClip ?: return ""
+            if (clip.itemCount == 0) {
+                return ""
+            }
+            return clip.getItemAt(0).coerceToText(this@MainActivity)?.toString() ?: ""
+        }
+
+        /** 收起软键盘：网页下滑手势里只 blur 输入框，WebView 不一定能收掉键盘 */
+        @JavascriptInterface
+        fun hideKeyboard() {
+            runOnUiThread {
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(webView.windowToken, 0)
+            }
+        }
+
         @JavascriptInterface
         fun beginFile(name: String): Boolean = downloadWriter.begin(name)
 
@@ -790,6 +871,17 @@ class MainActivity : AppCompatActivity() {
         /** 当前选定的保存目录名；空字符串表示系统「下载」 */
         @JavascriptInterface
         fun exportFolderName(): String = readExportFolderName()
+
+        /** 恢复默认保存位置：清掉用户选的目录，退回系统「下载」 */
+        @JavascriptInterface
+        fun resetExportFolder(): Boolean {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .remove(KEY_EXPORT_FOLDER)
+                .remove(KEY_EXPORT_FOLDER_NAME)
+                .apply()
+            runOnUiThread { downloadWriter.setTreeUri(null) }
+            return true
+        }
         @JavascriptInterface
         fun appendFileChunk(base64: String): Boolean = downloadWriter.append(base64)
 

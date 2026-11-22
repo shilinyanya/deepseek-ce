@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="@color/window_background">
 
-    <WebView
+    <com.linyan.deepseek.BackAwareWebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

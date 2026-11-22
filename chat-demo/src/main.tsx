@@ -26,3 +26,31 @@ createRoot(document.getElementById('root') as HTMLElement).render(
 ;(
   window as unknown as { AndroidBridge?: { notifyReady?: () => void } }
 ).AndroidBridge?.notifyReady?.()
+
+// 系统返回键：设置 / 搜索页 / 抽屉逐级退出，处理不了才让原生退出应用
+import { closeSettings, useSettingsDialog } from './components/settings/settingsDialogState.js'
+import { closeMobileSider, useMobileSider } from './components/sider/mobileSiderState.js'
+import { useSessionSearch } from './services/chat/searchState.js'
+
+;(
+  window as unknown as { __dsBack?: () => boolean }
+).__dsBack = () => {
+  if (useSettingsDialog.getState().open) {
+    closeSettings()
+    return true
+  }
+  const search = useSessionSearch.getState()
+  if (search.searchFocused) {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    // 退出全屏搜索页：回到侧栏列表，清空输入并移除焦点；再按一次才关抽屉
+    useSessionSearch.setState({ query: '', searchFocused: false, restoreSearch: false })
+    return true
+  }
+  if (useMobileSider.getState().open) {
+    closeMobileSider()
+    return true
+  }
+  return false
+}
