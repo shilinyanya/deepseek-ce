@@ -12,6 +12,8 @@ type NativeBridge = {
   chooseExportFolder?: () => boolean
   /** 当前选定的保存目录名；空字符串表示系统「下载」 */
   exportFolderName?: () => string
+  /** 恢复默认保存位置（系统「下载」） */
+  resetExportFolder?: () => boolean
 }
 
 const getNativeBridge = (): NativeBridge | null => {
@@ -74,6 +76,19 @@ export const currentExportFolder = (): string => {
     return getNativeBridge()?.exportFolderName?.() ?? ''
   } catch {
     return ''
+  }
+}
+
+/** 是否支持「恢复默认保存位置」 */
+export const canResetExportFolder = (): boolean =>
+  typeof getNativeBridge()?.resetExportFolder === 'function'
+
+/** 恢复默认保存位置：清掉用户选的目录，退回系统「下载」 */
+export const resetExportFolder = (): boolean => {
+  try {
+    return getNativeBridge()?.resetExportFolder?.() ?? false
+  } catch {
+    return false
   }
 }
 

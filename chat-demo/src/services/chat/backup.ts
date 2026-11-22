@@ -42,18 +42,27 @@ const sessionFileName = (date: Date, title: string) => {
 }
 
 /** 导出为历史会话导出格式的 ZIP，可再次导入。 */
-export const exportHistory = (): Promise<{ name: string; blob: Blob }> =>
+export const exportHistory = (
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<{ name: string; blob: Blob }> =>
   enqueueBackup(async () => {
     // 列表和已加载内容保留导出开始时的快照；未打开的会话逐条读取，不填满详情缓存。
     const { sessions, sessionCache } = useChatStore.getState()
+    let done = 0
     async function* readSessions(): AsyncGenerator<Session> {
       for (const summary of sessions) {
+        if (signal?.aborted) {
+          throw new DOMException('Export aborted', 'AbortError')
+        }
         const session = Object.hasOwn(sessionCache, summary.id)
           ? sessionCache[summary.id]
           : await db.loadSession(summary.id)
         if (!session) {
           throw new Error(`History session disappeared during export: ${summary.id}`)
         }
+        done += 1
+        onProgress?.(done, sessions.length)
         // 详情读取期间可能重命名，归档标题与开始时的列表保持一致。
         yield { ...session, ...summary }
       }
@@ -91,12 +100,13 @@ export const exportSession = (sessionId: string): Promise<{ name: string; blob: 
  */
 export const importHistory = (
   file: File,
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
 ): Promise<number> =>
   enqueueBackup(async () => {
     const { checkArchiveFormat, importArchive } = await import('./history/importArchive.js')
     await checkArchiveFormat(file)
-    return replaceHistory(() => importArchive(file, onProgress))
+    return replaceHistory(() => importArchive(file, onProgress, signal))
   })
 
 /**
@@ -106,12 +116,13 @@ export const importHistory = (
  */
 export const importSession = (
   file: File,
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
 ): Promise<number> =>
   enqueueBackup(async () => {
     const { checkArchiveFormat, importSingleSession } = await import('./history/importArchive.js')
     await checkArchiveFormat(file)
-    const { session, files } = await importSingleSession(file, onProgress)
+    const { session, files } = await importSingleSession(file, onProgress, signal)
     // 会话 ID 必须换新，否则会覆盖归档来源里同 ID 的已有会话；消息 ID 只在本会话内使用，保留原样。
     const imported: Session = {
       ...session,

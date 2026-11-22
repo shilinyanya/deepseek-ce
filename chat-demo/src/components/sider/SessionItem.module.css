@@ -10,13 +10,23 @@
   line-height: 22px;
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
+  /* 系统自带的按压高亮是矩形，改不成圆角，所以关掉，改用 :active */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 
   &.active {
     background-color: var(--dsw-specific-sidebar-nav-item-active-accent);
     color: var(--dsw-alias-brand-primary-invert);
   }
 
-  @media (hover: hover) {
+  /* 按住时也是浅色，和长按后的效果一致 */
+  &:active:not(.active) {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
     &:not(.active):hover {
       background-color: var(--dsw-specific-sidebar-nav-item-hover);
     }
@@ -69,6 +79,12 @@
   background-color: var(--dsw-specific-sidebar-nav-item-active-accent);
 }
 
+/* 勾选图标缩小并居中在圆圈里 */
+.check svg {
+  width: 11px;
+  height: 11px;
+}
+
 .check {
   display: flex;
   align-items: center;
@@ -114,7 +130,7 @@
   }
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .item {
     height: 44px;
     padding: 11px 6px 11px 12px;
@@ -132,4 +148,30 @@
     border-radius: 16px;
     font-size: 16px;
   }
+}
+
+/* 搜索片段里命中的关键词 */
+.hit {
+  /* 加粗 + 品牌色，比单纯 font-weight 更明显 */
+  color: var(--dsw-alias-brand-primary);
+  background: none;
+  font-weight: 700;
+}
+
+/* 标题行：标题 + 命中时间 */
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hitTime {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* 长按/点开的那一条：浅色，和当前会话的选中色区分开 */
+.pressed {
+  background-color: rgba(255, 255, 255, 0.06);
 }

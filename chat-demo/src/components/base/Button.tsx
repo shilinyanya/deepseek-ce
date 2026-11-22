@@ -17,5 +17,10 @@ export const Button = ({
     type="button"
     className={clsx(styles.button, styles[variant], styles[size], block && styles.block, className)}
     {...props}
+    // WebView 里触摸点击后按钮可能一直保持焦点/按下态，点完主动失焦
+    onPointerUp={(event) => {
+      props.onPointerUp?.(event)
+      event.currentTarget.blur()
+    }}
   />
 )

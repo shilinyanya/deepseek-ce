@@ -101,6 +101,16 @@ type Settings = {
   siderCollapsed: boolean
   /** 开启后会话菜单里出现「压缩上下文」；多数人用不到，默认关 */
   manualCompress: boolean
+  /** 实验性：当前模型无法联网时，用指定模型执行搜索/网页读取，再把资料交给当前模型 */
+  networkModel: ChatModel
+  /** 实验性：是否启用自定义联网模型；关闭时用标准 deepseek-flash */
+  networkModelEnabled: boolean
+  /** 实验性：标题用额外请求生成（旧接口） */
+  titleByExtraRequest: boolean
+  /** 启用标题生成：主请求带 title.enabled=true，服务端顺带生成（新接口） */
+  titleServerEnabled: boolean
+  /** 标题生成方式：新接口（服务端 title.enabled）或旧接口（额外请求） */
+  titleMode: 'server' | 'extra'
   /** 使用自定义模型（中转站）：开启后不再走官方模型 */
   relayEnabled: boolean
   /** 中转站地址，例如 https://api.example.com（会自动补 /v1/chat/completions） */
@@ -124,6 +134,11 @@ const KEYS = {
   search: 'chat-demo:search',
   autoReadAloud: 'chat-demo:auto-read-aloud',
   manualCompress: 'chat-demo:manual-compress',
+  networkModel: 'chat-demo:network-model',
+  networkModelEnabled: 'chat-demo:network-model-enabled',
+  titleByExtraRequest: 'chat-demo:title-by-extra-request',
+  titleServerEnabled: 'chat-demo:title-server-enabled',
+  titleMode: 'chat-demo:title-mode',
   relayEnabled: 'chat-demo:relay-enabled',
   relayBaseUrl: 'chat-demo:relay-base-url',
   relayApiKey: 'chat-demo:relay-api-key',
@@ -327,6 +342,11 @@ export const useSettings = create<Settings>(() => {
     defaultPromptPresetId: initialDefaultPresetId(promptPresets),
     siderCollapsed: read(KEYS.siderCollapsed) === 'true',
     manualCompress: read(KEYS.manualCompress) === 'true',
+    networkModel: read(KEYS.networkModel) ?? 'deepseek-flash',
+    networkModelEnabled: read(KEYS.networkModelEnabled) === 'true',
+    titleByExtraRequest: read(KEYS.titleByExtraRequest) === 'true',
+    titleServerEnabled: read(KEYS.titleServerEnabled) !== 'false',
+    titleMode: read(KEYS.titleMode) === 'extra' ? 'extra' : 'server',
     relayEnabled: read(KEYS.relayEnabled) === 'true',
     relayBaseUrl: read(KEYS.relayBaseUrl) ?? '',
     relayApiKey: read(KEYS.relayApiKey) ?? '',
@@ -385,6 +405,36 @@ export const setAutoReadAloud = (autoReadAloud: boolean) => {
 export const setManualCompress = (manualCompress: boolean) => {
   write(KEYS.manualCompress, String(manualCompress))
   useSettings.setState({ manualCompress })
+}
+
+/** 实验性：模型无法联网时使用的搜索模型 */
+export const setNetworkModel = (networkModel: ChatModel) => {
+  write(KEYS.networkModel, networkModel)
+  useSettings.setState({ networkModel })
+}
+
+/** 实验性：是否启用自定义联网模型（关闭时用标准 flash） */
+export const setNetworkModelEnabled = (networkModelEnabled: boolean) => {
+  write(KEYS.networkModelEnabled, String(networkModelEnabled))
+  useSettings.setState({ networkModelEnabled })
+}
+
+/** 实验性：标题用额外请求生成（关闭时用服务端标题） */
+export const setTitleByExtraRequest = (titleByExtraRequest: boolean) => {
+  write(KEYS.titleByExtraRequest, String(titleByExtraRequest))
+  useSettings.setState({ titleByExtraRequest })
+}
+
+/** 启用标题生成（官方新接口：title.enabled） */
+export const setTitleServerEnabled = (titleServerEnabled: boolean) => {
+  write(KEYS.titleServerEnabled, String(titleServerEnabled))
+  useSettings.setState({ titleServerEnabled })
+}
+
+/** 标题生成方式：新接口 / 旧接口（二选一） */
+export const setTitleMode = (titleMode: 'server' | 'extra') => {
+  write(KEYS.titleMode, titleMode)
+  useSettings.setState({ titleMode })
 }
 
 /** 自定义模型（中转站）开关与参数 */

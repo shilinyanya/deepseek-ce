@@ -38,6 +38,10 @@ import {
   setTtsVoice,
   useSettings,
   setManualCompress,
+  setNetworkModel,
+  setNetworkModelEnabled,
+  setTitleByExtraRequest,
+  setTitleMode,
   setRelayEnabled,
   setRelayConfig,
   setSessionOrganizer,
@@ -64,6 +68,7 @@ import {
   saveBlob,
   canChooseExportFolder,
   chooseExportFolder,
+  resetExportFolder,
   currentExportFolder,
 } from '../../utils/download.js'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
@@ -77,7 +82,8 @@ import styles from './Settings.module.css'
  */
 export const SettingsDialog = () => {
   const open = useSettingsDialog((state) => state.open)
-  return open ? <SettingsContent /> : null
+  const closing = useSettingsDialog((state) => state.closing)
+  return open ? <SettingsContent closing={closing} /> : null
 }
 
 const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode }[] = [
@@ -89,7 +95,7 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
 ]
 
-const SettingsContent = () => {
+const SettingsContent = ({ closing = false }: { closing?: boolean }) => {
   const t = useTranslate()
   const isMobile = useIsMobile()
   // 打开时按调用方指定的分组选中，之后在弹窗内切换
@@ -108,6 +114,11 @@ const SettingsContent = () => {
         title={t('settings')}
         closable
         className={styles.dialog}
+        closing={closing}
+        style={{
+          transition: 'transform 0.15s cubic-bezier(0.4, 0, 1, 1)',
+          transform: closing ? 'translateX(100%)' : 'translateX(0)',
+        }}
         mainClassName={styles.dialogMain}
         onClose={() => {
           if (!historyDelete.busy && !historyImport.busy && !singleImport.busy) {
@@ -169,24 +180,31 @@ const SettingsContent = () => {
               {isMobile ? <ApiKeyConfirm editor={apiKeyEditor} /> : null}
             </>
           )}
-          <div
-            style={{
-              marginTop: 8,
-              paddingTop: 12,
-              borderTop: '1px solid var(--dsw-alias-border-l2)',
-              fontSize: 12,
-              lineHeight: 1.6,
-              color: 'var(--dsw-alias-label-tertiary)',
-              textAlign: 'center',
-            }}
-          >
-            {t('settingsAbout')}
-          </div>
+          {t('settingsAbout') ? (
+            <div
+              style={{
+                marginTop: 8,
+                paddingTop: 12,
+                borderTop: '1px solid var(--dsw-alias-border-l2)',
+                fontSize: 12,
+                lineHeight: 1.6,
+                color: 'var(--dsw-alias-label-tertiary)',
+                textAlign: 'center',
+                whiteSpace: 'pre-line',
+              }}
+            >
+              {t('settingsAbout')}
+            </div>
+          ) : null}
         </div>
       </Modal>
       {historyImport.file ? <ImportConfirm historyImport={historyImport} /> : null}
-      {historyImport.busy ? <ImportProgress progress={historyImport.progress} /> : null}
-      {singleImport.busy ? <ImportProgress progress={singleImport.progress} /> : null}
+      {historyImport.busy ? (
+        <ImportProgress progress={historyImport.progress} onCancel={historyImport.abort} />
+      ) : null}
+      {singleImport.busy ? (
+        <ImportProgress progress={singleImport.progress} onCancel={singleImport.abort} />
+      ) : null}
       {historyDelete.opened ? <DeleteAllConfirm historyDelete={historyDelete} /> : null}
     </>
   )
@@ -323,6 +341,15 @@ const LocationSetting = () => {
               onChange={(value) => setLocation({ region: value })}
             />
           )}
+          {location ? (
+            <button
+              type="button"
+              className={styles.locationReset}
+              onClick={() => setLocation(null)}
+            >
+              {t('settingsLocationReset')}
+            </button>
+          ) : null}
         </div>
       }
     />
@@ -428,15 +455,8 @@ const ModelSetting = () => {
   const apiKey = useSettings((state) => state.apiKey)
   const [refreshing, setRefreshing] = useState(false)
 
-  const labelOf = (item: ModelInfo) => {
-    if (item.id === 'deepseek-flash') {
-      return t('settingsModelFlash')
-    }
-    if (item.id === 'deepseek-v4-pro') {
-      return t('settingsModelPro')
-    }
-    return item.name ?? item.id
-  }
+  // 名称以接口返回为准：官方改版后这里自动跟着变，不用改代码
+  const labelOf = (item: ModelInfo) => item.name ?? item.id
 
   const refresh = async () => {
     if (refreshing) {
@@ -468,28 +488,104 @@ const ModelSetting = () => {
   }
 
   return (
-    <SettingCell
-      label={t('settingsModel')}
-      description={t('settingsModelDescription')}
-      status={null}
-      action={
-        <div className={styles.modelAction}>
-          <Select<ChatModel>
-            ariaLabel={t('settingsModel')}
-            className={styles.modelSelect}
-            value={model}
-            options={models.map((item) => ({ value: item.id, label: labelOf(item) }))}
-            onChange={setModel}
-          />
-          <IconButton
-            icon={<IconRefreshOutline16 />}
-            tooltip={t('settingsModelRefresh')}
-            disabled={refreshing}
-            onClick={() => void refresh()}
-          />
-        </div>
+    <div className={styles.stackedCell}>
+      <div className={styles.text}>
+        <div className={styles.label}>{t('settingsModel')}</div>
+        <div className={styles.description}>{t('settingsModelDescription')}</div>
+      </div>
+      <div className={styles.stackedRow}>
+        <Select<ChatModel>
+          ariaLabel={t('settingsModel')}
+          className={styles.modelSelectWide}
+          value={model}
+          options={models.map((item) => ({ value: item.id, label: labelOf(item) }))}
+          onChange={setModel}
+        />
+        <IconButton
+          icon={<IconRefreshOutline16 />}
+          tooltip={t('settingsModelRefresh')}
+          disabled={refreshing}
+          onClick={() => void refresh()}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** 联网模型：先开开关，开启后才选择；选项来自联网刷新后的模型列表 */
+const NetworkModelSetting = () => {
+  const t = useTranslate()
+  const enabled = useSettings((state) => state.networkModelEnabled)
+  const networkModel = useSettings((state) => state.networkModel)
+  const models = useSettings((state) => state.models)
+  const apiKey = useSettings((state) => state.apiKey)
+  const [refreshing, setRefreshing] = useState(false)
+
+  // 名称以接口返回为准
+  const labelOf = (item: ModelInfo) => item.name ?? item.id
+
+  const refresh = async () => {
+    if (refreshing) {
+      return
+    }
+    if (!apiKey) {
+      showToast({ key: 'settingsModelRefreshNoKey', type: 'error' })
+      return
+    }
+    setRefreshing(true)
+    try {
+      const fetched = await listModels(apiKey)
+      if (fetched.length === 0) {
+        showToast({ key: 'settingsModelRefreshEmpty', type: 'error' })
+        return
       }
-    />
+      const merged = mergeModels(models, fetched)
+      setModels(merged)
+      if (!merged.some((item) => item.id === networkModel)) {
+        setNetworkModel(merged[0].id)
+      }
+      showToast({ key: 'settingsModelRefreshed', params: { count: fetched.length } })
+    } catch {
+      showToast({ key: 'settingsModelRefreshFailed', type: 'error' })
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  return (
+    <div className={styles.stackedCell}>
+      <div className={styles.text}>
+        <div className={styles.label}>{t('settingsNetworkModelEnabled')}</div>
+        <div className={styles.description}>{t('settingsNetworkModelEnabledDescription')}</div>
+      </div>
+      <div className={styles.stackedRow}>
+        <Switch
+          checked={enabled}
+          ariaLabel={t('settingsNetworkModelEnabled')}
+          onChange={(checked) => {
+            setNetworkModelEnabled(checked)
+            showToast({ key: checked ? 'settingsNetworkModelOn' : 'settingsNetworkModelOff' })
+          }}
+        />
+        {enabled ? (
+          <>
+            <Select<ChatModel>
+              ariaLabel={t('settingsNetworkModel')}
+              className={styles.modelSelectWide}
+              value={networkModel}
+              options={models.map((item) => ({ value: item.id, label: labelOf(item) }))}
+              onChange={setNetworkModel}
+            />
+            <IconButton
+              icon={<IconRefreshOutline16 />}
+              tooltip={t('settingsModelRefresh')}
+              disabled={refreshing}
+              onClick={() => void refresh()}
+            />
+          </>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
@@ -501,38 +597,62 @@ const SystemPromptSetting = () => {
   const current = presets.find((item) => item.id === defaultId) ?? presets[0]
   const presetName = (id: string, name: string) =>
     id === DEFAULT_PRESET_ID ? t('promptPresetDefault') : name || t('promptPresetUntitled')
+  const [renaming, setRenaming] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   return (
     <div className={styles.cell}>
       <div className={styles.label}>{t('settingsSystemPrompt')}</div>
       <div className={styles.description}>{t('settingsSystemPromptDescription')}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <select
-          value={current.id}
-          aria-label={t('settingsSystemPrompt')}
-          onChange={(event) => setDefaultPromptPreset(event.target.value)}
-          style={{ flex: '1 1 140px', minWidth: 120, height: 36, borderRadius: 10, padding: '0 10px' }}
-        >
-          {presets.map((item) => (
-            <option key={item.id} value={item.id}>
-              {presetName(item.id, item.name)}
-            </option>
-          ))}
-        </select>
-        {current.id === DEFAULT_PRESET_ID ? null : (
+      <div className={styles.promptRow}>
+        {renaming ? (
           <input
+            autoFocus
             value={current.name}
             placeholder={t('promptPresetNamePlaceholder')}
             onChange={(event) => updatePromptPreset(current.id, { name: event.target.value })}
-            style={{ flex: '1 1 120px', minWidth: 100, height: 36, borderRadius: 10, padding: '0 10px' }}
+            onBlur={() => setRenaming(false)}
+            className={styles.promptSelect}
+            style={{ height: 36, borderRadius: 10, padding: '0 10px' }}
           />
+        ) : (
+          <Select
+            ariaLabel={t('settingsSystemPrompt')}
+            className={styles.promptSelect}
+            value={current.id}
+            options={presets.map((item) => ({
+              value: item.id,
+              label: presetName(item.id, item.name),
+            }))}
+            onChange={(value) => setDefaultPromptPreset(value)}
+          />
+        )}
+      </div>
+      <div className={styles.promptActions}>
+        {current.id === DEFAULT_PRESET_ID ? null : (
+          <Button
+            variant="outlined"
+            size="m"
+            className={styles.cellButton}
+            onClick={() => setRenaming(true)}
+          >
+            {t('promptPresetRename')}
+          </Button>
         )}
         <Button
           variant="outlined"
           size="m"
           className={styles.cellButton}
           onClick={() => {
-            const id = addPromptPreset('')
+            const taken = (name: string) => presets.some((item) => item.name === name)
+            let name = t('promptPresetUntitled')
+            let index = 2
+            while (taken(name)) {
+              name = `${t('promptPresetUntitled')}${index}`
+              index += 1
+            }
+            const id = addPromptPreset(name)
             setDefaultPromptPreset(id)
+            setRenaming(true)
           }}
         >
           {t('promptPresetNew')}
@@ -542,12 +662,39 @@ const SystemPromptSetting = () => {
             variant="dangerOutlined"
             size="m"
             className={styles.cellButton}
-            onClick={() => removePromptPreset(current.id)}
+            onClick={() => setConfirmDelete(true)}
           >
             {t('promptPresetDelete')}
           </Button>
         )}
       </div>
+      {confirmDelete ? (
+        <Modal
+          title={t('promptPresetDeleteConfirm')}
+          className={styles.confirmDialog}
+          closable
+          onClose={() => setConfirmDelete(false)}
+          footer={
+            <>
+              <Button variant="outlined" size="m" onClick={() => setConfirmDelete(false)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="dangerOutlined"
+                size="m"
+                onClick={() => {
+                  removePromptPreset(current.id)
+                  setConfirmDelete(false)
+                }}
+              >
+                {t('delete')}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ textAlign: 'center', fontWeight: 600 }}>{presetName(current.id, current.name)}</div>
+        </Modal>
+      ) : null}
       <textarea
         className={styles.systemPrompt}
         rows={4}
@@ -742,10 +889,40 @@ const MoreSettings = () => {
   const organizer = useSettings((state) => state.sessionOrganizer)
   const t = useTranslate()
   const manualCompress = useSettings((state) => state.manualCompress)
+  const titleMode = useSettings((state) => state.titleMode)
   return (
     <>
-      <div className={styles.divider} />
       <div className={styles.groupTitle}>{t('settingsMore')}</div>
+      <NetworkModelSetting />
+      <SettingCell
+        label={t('settingsTitleMode')}
+        description={t('settingsTitleModeDescription')}
+        status={null}
+        action={
+          <div className={styles.titleModeRow}>
+            <button
+              type="button"
+              className={clsx(styles.titleModeButton, titleMode === 'server' && styles.titleModeActive)}
+              onClick={() => {
+                setTitleMode('server')
+                showToast({ key: 'settingsTitleModeServerOn' })
+              }}
+            >
+              {t('settingsTitleModeServer')}
+            </button>
+            <button
+              type="button"
+              className={clsx(styles.titleModeButton, titleMode === 'extra' && styles.titleModeActive)}
+              onClick={() => {
+                setTitleMode('extra')
+                showToast({ key: 'settingsTitleModeExtraOn' })
+              }}
+            >
+              {t('settingsTitleModeExtra')}
+            </button>
+          </div>
+        }
+      />
       <SettingCell
         label={t('settingsManualCompress')}
         description={t('settingsManualCompressDescription')}
@@ -761,7 +938,6 @@ const MoreSettings = () => {
           />
         }
       />
-      <RelaySettings />
       <SettingCell
         label={t('settingsSessionGroups')}
         description={t('settingsSessionGroupsDescription')}
@@ -777,6 +953,7 @@ const MoreSettings = () => {
           />
         }
       />
+      <RelaySettings />
     </>
   )
 }
@@ -788,11 +965,18 @@ const RelaySettings = () => {
   const relayBaseUrl = useSettings((state) => state.relayBaseUrl)
   const relayApiKey = useSettings((state) => state.relayApiKey)
   const relayModel = useSettings((state) => state.relayModel)
-  const fields: { key: 'relayBaseUrl' | 'relayApiKey' | 'relayModel'; label: string; placeholder: string; value: string }[] = [
+  const fields: {
+    key: 'relayBaseUrl' | 'relayApiKey' | 'relayModel'
+    label: string
+    placeholder: string
+    hint?: string
+    value: string
+  }[] = [
     {
       key: 'relayBaseUrl',
       label: t('settingsRelayBaseUrl'),
       placeholder: t('settingsRelayBaseUrlPlaceholder'),
+      hint: t('settingsRelayBaseUrlHint'),
       value: relayBaseUrl,
     },
     {
@@ -821,7 +1005,7 @@ const RelaySettings = () => {
             onChange={(checked) => {
               if (!checked) {
                 setRelayEnabled(false)
-                showToast({ key: 'manualCompressDisabled' })
+                showToast({ key: 'relayDisabled' })
                 return
               }
               const state = useSettings.getState()
@@ -832,6 +1016,7 @@ const RelaySettings = () => {
               void askRelayEnable().then((confirmed) => {
                 if (confirmed) {
                   setRelayEnabled(true)
+                  showToast({ key: 'relayEnabled' })
                 }
               })
             }}
@@ -842,6 +1027,7 @@ const RelaySettings = () => {
         <div key={field.key} className={clsx(styles.cell, styles.row)}>
           <div className={styles.text}>
             <div className={styles.label}>{field.label}</div>
+            {field.hint ? <div className={styles.description}>{field.hint}</div> : null}
           </div>
           <input
             className={styles.apiKeyInput}
@@ -894,12 +1080,15 @@ const useHistoryImport = () => {
   const [status, setStatus] = useState<Status>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const importing = useRef(false)
+  const abortRef = useRef<AbortController | null>(null)
 
   const confirm = async () => {
     if (!file || importing.current) {
       return
     }
     importing.current = true
+    const controller = new AbortController()
+    abortRef.current = controller
     setFile(null)
     setBusy(true)
     setStatus(null)
@@ -909,19 +1098,25 @@ const useHistoryImport = () => {
       // 但每个条目都 setState 会触发一次渲染，几千个条目时白白拖慢导入：
       // 这里按 60ms 节流，只在真正要显示新进度时才更新。
       let lastPaint = 0
-      const count = await importHistory(file, (done, total) => {
-        const now = performance.now()
-        if (now - lastPaint < 60 && done !== total) {
-          return
-        }
-        lastPaint = now
-        setProgress({ done, total })
-      })
+      const count = await importHistory(
+        file,
+        (done, total) => {
+          const now = performance.now()
+          if (now - lastPaint < 60 && done !== total) {
+            return
+          }
+          lastPaint = now
+          setProgress({ done, total })
+        },
+        controller.signal
+      )
       setStatus({ key: count === 1 ? 'historyImportedOne' : 'historyImported', params: { count } })
     } catch {
-      setStatus({ key: 'historyImportFailed', error: true })
+      // 用户主动取消：不算失败，直接收起进度
+      setStatus(controller.signal.aborted ? null : { key: 'historyImportFailed', error: true })
     } finally {
       importing.current = false
+      abortRef.current = null
       setBusy(false)
       setProgress(null)
     }
@@ -934,6 +1129,7 @@ const useHistoryImport = () => {
     progress,
     select: setFile,
     cancel: () => setFile(null),
+    abort: () => abortRef.current?.abort(),
     confirm,
   }
 }
@@ -947,44 +1143,60 @@ const useHistoryImportSingle = () => {
   const [status, setStatus] = useState<Status>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const importing = useRef(false)
+  const abortRef = useRef<AbortController | null>(null)
 
   const start = async (file: File) => {
     if (importing.current) {
       return
     }
     importing.current = true
+    const controller = new AbortController()
+    abortRef.current = controller
     setBusy(true)
     setStatus(null)
     setProgress(null)
     try {
       // 进度按归档条目数走，和全量导入同一个回调形状；同样按 60ms 节流
       let lastPaint = 0
-      await importSession(file, (done, total) => {
-        const now = performance.now()
-        if (now - lastPaint < 60 && done !== total) {
-          return
-        }
-        lastPaint = now
-        setProgress({ done, total })
-      })
+      await importSession(
+        file,
+        (done, total) => {
+          const now = performance.now()
+          if (now - lastPaint < 60 && done !== total) {
+            return
+          }
+          lastPaint = now
+          setProgress({ done, total })
+        },
+        controller.signal
+      )
       setStatus({ key: 'historyImportedOne' })
     } catch (error) {
-      setStatus(errorStatus('historyImportSingleFailed', error))
+      setStatus(
+        controller.signal.aborted ? null : errorStatus('historyImportSingleFailed', error)
+      )
     } finally {
       importing.current = false
+      abortRef.current = null
       setBusy(false)
       setProgress(null)
     }
   }
 
-  return { busy, status, progress, start }
+  return { busy, status, progress, start, abort: () => abortRef.current?.abort() }
 }
 
 /**
  * 导入期间的遮罩提示：归档越大写得越久，明确告知不能退出，
  * 并用条目进度条替代“什么都没发生”的卡死观感。
  */
-const ImportProgress = ({ progress }: { progress: { done: number; total: number } | null }) => {
+const ImportProgress = ({
+  progress,
+  onCancel,
+}: {
+  progress: { done: number; total: number } | null
+  onCancel?: () => void
+}) => {
   const t = useTranslate()
   const ready = !!progress && progress.total > 0
   const percent = ready ? Math.round((progress.done / progress.total) * 100) : 0
@@ -992,7 +1204,16 @@ const ImportProgress = ({ progress }: { progress: { done: number; total: number 
     <Modal
       title={t('historyImportingTitle')}
       onClose={() => {}}
-      footer={ready ? <div style={{ fontSize: 14, opacity: 0.7 }}>{percent}%</div> : null}
+      footer={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {ready ? <span style={{ fontSize: 14, opacity: 0.7 }}>{percent}%</span> : null}
+          {onCancel ? (
+            <Button variant="outlined" size="m" onClick={onCancel}>
+              {t('cancel')}
+            </Button>
+          ) : null}
+        </div>
+      }
     >
       <div style={{ fontSize: 14, lineHeight: 1.7, opacity: 0.75 }}>
         {t('historyImportingDescription')}
@@ -1158,16 +1379,32 @@ const ExportFolderSetting = () => {
       description={folder ? t('exportFolderChosen', { name: folder }) : t('exportFolderDefault')}
       status={null}
       action={
-        <Button
-          variant="outlined"
-          size="m"
-          className={styles.cellButton}
-          onClick={() => {
-            chooseExportFolder()
-          }}
-        >
-          {t('exportFolderChoose')}
-        </Button>
+        <div className={styles.folderActions}>
+          <Button
+            variant="outlined"
+            size="m"
+            className={styles.cellButton}
+            onClick={() => {
+              chooseExportFolder()
+            }}
+          >
+            {t('exportFolderChoose')}
+          </Button>
+          {folder ? (
+            <Button
+              variant="outlined"
+              size="m"
+              className={styles.cellButton}
+              onClick={() => {
+                if (resetExportFolder()) {
+                  setFolder('')
+                }
+              }}
+            >
+              {t('exportFolderReset')}
+            </Button>
+          ) : null}
+        </div>
       }
     />
   )
@@ -1178,13 +1415,21 @@ const ExportHistory = ({ disabled }: { disabled: boolean }) => {
   const t = useTranslate()
   const empty = useChatStore((state) => state.sessions.length === 0)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [status, setStatus] = useState<Status>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const onExport = async () => {
     setBusy(true)
     setStatus(null)
+    setProgress(null)
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
-      const { name, blob } = await exportHistory()
+      const { name, blob } = await exportHistory(
+        (done, total) => setProgress({ done, total }),
+        controller.signal
+      )
       const target = await saveBlob(blob, name)
       if (target === 'native') {
         showToast({ key: 'historyExportSaved' })
@@ -1192,29 +1437,91 @@ const ExportHistory = ({ disabled }: { disabled: boolean }) => {
         setStatus({ key: 'historyExportFailed', error: true })
       }
     } catch (error) {
-      setStatus(errorStatus('historyExportFailed', error))
+      // 用户主动终止：不算失败
+      setStatus(controller.signal.aborted ? null : errorStatus('historyExportFailed', error))
     } finally {
+      abortRef.current = null
       setBusy(false)
+      setProgress(null)
     }
   }
 
   return (
-    <SettingCell
-      label={t('exportAllLabel')}
-      description={t('historyExportDescription')}
-      status={status}
-      action={
-        <Button
-          variant="outlined"
-          size="m"
-          className={styles.cellButton}
-          disabled={disabled || busy || empty}
-          onClick={() => void onExport()}
-        >
-          <IconDownloadOutline16 />
-          {t('exportAllDownload')}
-        </Button>
+    <>
+      <SettingCell
+        label={t('exportAllLabel')}
+        description={t('historyExportDescription')}
+        status={status}
+        action={
+          <Button
+            variant="outlined"
+            size="m"
+            className={styles.cellButton}
+            disabled={disabled || busy || empty}
+            onClick={() => void onExport()}
+          >
+            <IconDownloadOutline16 />
+            {t('exportAllDownload')}
+          </Button>
+        }
+      />
+      {busy ? (
+        <ExportProgress progress={progress} onCancel={() => abortRef.current?.abort()} />
+      ) : null}
+    </>
+  )
+}
+
+/** 导出进度：和导入共用同一套样式，带一个终止按钮 */
+const ExportProgress = ({
+  progress,
+  onCancel,
+}: {
+  progress: { done: number; total: number } | null
+  onCancel: () => void
+}) => {
+  const t = useTranslate()
+  const ready = !!progress && progress.total > 0
+  const percent = ready ? Math.round((progress.done / progress.total) * 100) : 0
+  return (
+    <Modal
+      title={t('historyExportingTitle')}
+      onClose={() => {}}
+      footer={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {ready ? <span style={{ fontSize: 14, opacity: 0.7 }}>{percent}%</span> : null}
+          <Button variant="outlined" size="m" onClick={onCancel}>
+            {t('cancel')}
+          </Button>
+        </div>
       }
-    />
+    >
+      <div style={{ fontSize: 14, lineHeight: 1.7, opacity: 0.75 }}>
+        {t('historyExportingDescription')}
+      </div>
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={ready ? percent : undefined}
+        style={{
+          height: 6,
+          margin: '16px 0 10px',
+          borderRadius: 999,
+          overflow: 'hidden',
+          background: 'rgba(127,127,127,0.2)',
+        }}
+      >
+        <div
+          style={{
+            width: ready ? `${percent}%` : '35%',
+            height: '100%',
+            borderRadius: 999,
+            background: 'var(--dsw-alias-brand-primary)',
+            transition: 'width 0.2s ease',
+          }}
+        />
+      </div>
+    </Modal>
   )
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { IconEditOutline16 } from '../base/icons.js'
-import { useSettings } from '../../services/settings.js'
+import { useRef, useState } from 'react'
+import { IconEditOutline16, IconTrashOutline16 } from '../base/icons.js'
+import { setApiKey, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { IconButton } from '../base/IconButton.js'
 import { useApiKeyForm } from './useApiKeyForm.js'
@@ -22,6 +22,31 @@ export const ApiKeyField = ({ editor }: { editor: ApiKeyEditor }) => {
   const t = useTranslate()
   const isMobile = useIsMobile()
   const { apiKey, editing, setEditing, form, showInput } = editor
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  /** 从系统剪贴板粘贴 API Key：优先走原生桥接，浏览器里退回异步剪贴板接口 */
+  const pasteApiKey = () => {
+    const bridge = (
+      window as unknown as { AndroidBridge?: { readClipboard?: () => string } }
+    ).AndroidBridge
+    let text = ''
+    try {
+      text = bridge?.readClipboard?.() ?? ''
+    } catch {
+      text = ''
+    }
+    if (text.trim()) {
+      // 只填内容，不聚焦输入框（避免自动弹出键盘）
+      form.setValue(text.trim())
+      return
+    }
+    void navigator.clipboard
+      ?.readText()
+      .then((value) => {
+        form.setValue(value.trim())
+      })
+      .catch(() => {})
+  }
 
   return (
     <div className={styles.cell}>
@@ -36,10 +61,20 @@ export const ApiKeyField = ({ editor }: { editor: ApiKeyEditor }) => {
               tooltip={t('apiKeyEdit')}
               onClick={() => setEditing(true)}
             />
+            <IconButton
+              tone="primary"
+              icon={<IconTrashOutline16 />}
+              tooltip={t('apiKeyClear')}
+              onClick={() => {
+                setApiKey(null)
+                setEditing(true)
+              }}
+            />
           </div>
         ) : (
           <div className={styles.apiKeyInput}>
             <input
+              ref={inputRef}
               type="password"
               placeholder={t('apiKeyPlaceholder')}
               autoComplete="off"
@@ -74,6 +109,17 @@ export const ApiKeyField = ({ editor }: { editor: ApiKeyEditor }) => {
                   {form.verifying ? t('apiKeyVerifying') : t('confirm')}
                 </button>
               </>
+            ) : null}
+            {isMobile ? (
+              <button
+                type="button"
+                className={styles.pasteButton}
+                // 保持输入框焦点
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={pasteApiKey}
+              >
+                {t('apiKeyPaste')}
+              </button>
             ) : null}
           </div>
         )}

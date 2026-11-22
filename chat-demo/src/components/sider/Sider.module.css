@@ -1,6 +1,10 @@
 .sider {
   display: flex;
   flex-direction: column;
+  /* 侧栏里的文字都不该被长按选中；输入框单独放开 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   flex-shrink: 0;
   box-sizing: border-box;
   width: 261px;
@@ -26,6 +30,10 @@
   flex: 1;
   min-width: 0;
   padding-left: 4px;
+  /* 应用名不该被长按选中 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   overflow: hidden;
   font-size: 20px;
   line-height: 22px;
@@ -36,14 +44,38 @@
 }
 
 /* 搜索框：和官方一样的胶囊输入 */
-.search {
+.searchRow {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin: 6px 0 12px;
+}
+
+/* 搜索页的返回箭头：在输入框外面，不属于输入框 */
+.searchBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
   height: 40px;
-  margin-bottom: 12px;
   padding: 0 10px 0 12px;
   border-radius: 100px;
   background-color: var(--dsw-specific-input-major);
@@ -90,9 +122,11 @@
   align-items: center;
   gap: 4px;
   box-sizing: border-box;
-  width: 100%;
+  flex: 1;
+  width: auto;
   border: none;
   background: none;
+  color: inherit;
   font: inherit;
   font-size: 12px;
   line-height: 18px;
@@ -118,14 +152,85 @@
 }
 
 /* 多选模式下底部的批量操作栏 */
+.selectHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  /* 和搜索框同高，进入多选时列表不跳 */
+  min-height: 40px;
+  margin: 6px 0 12px;
+  padding: 0 4px;
+}
+
+.selectTitle {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.selectHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectCountText {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+}
+
+.selectClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
 .selectBar {
   display: flex;
   align-items: center;
+  justify-content: space-around;
   gap: 8px;
   flex-shrink: 0;
   box-sizing: border-box;
   height: 64px;
   padding: 0 2px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.selectAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 8px 6px;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.selectDanger {
+  color: var(--dsw-alias-state-error-primary, #e5484d);
 }
 
 .selectAll {
@@ -224,6 +329,10 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 2px 10px;
   font-size: 12px;
   line-height: 18px;
@@ -255,8 +364,10 @@
   user-select: none;
   outline: none;
 
-  &:hover {
-    background-color: var(--dsw-specific-sidebar-nav-item-hover);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: var(--dsw-specific-sidebar-nav-item-hover);
+    }
   }
 
   &:focus-visible {
@@ -314,17 +425,25 @@
   bottom: 0;
   left: 0;
   z-index: 800;
+  transform: translateX(-100%);
+  will-change: transform;
+  transition: transform 0.21s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .drawerMask {
   position: absolute;
   inset: 0;
   z-index: 799;
+  /* 只负责点外部关闭，本身不画任何颜色 */
+  background-color: transparent;
 }
 
 .mobile {
-  width: 300px;
+  width: 280px;
   max-width: calc(100vw - 48px);
+  transition: width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* 抽屉打开时右侧是主界面卡片，分隔线会露在缝隙里，去掉 */
+  border-right: none;
 
   .listWrap {
     margin-top: 16px;
@@ -332,7 +451,10 @@
 
   .search {
     height: 44px;
-    margin-bottom: 14px;
+  }
+
+  .selectHeader {
+    min-height: 44px;
   }
 
   .searchInput {
@@ -340,7 +462,7 @@
   }
 
   .sectionToggle {
-    padding: 4px 10px 3px;
+    padding: 0;
     font-size: 14px;
     line-height: 22px;
   }
@@ -429,4 +551,156 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--dsw-alias-label-tertiary);
+}
+
+/* 加载更多命中时的提示 */
+.loadingMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.loadingSpinner {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--dsw-alias-border-l2);
+  border-top-color: var(--dsw-alias-label-secondary);
+  animation: sider-spin 0.8s linear infinite;
+}
+
+@keyframes sider-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 移动端抽屉层：常驻，靠可见性开关，避免每次重开都重新挂载列表 */
+.drawerLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  pointer-events: none;
+  opacity: 0;
+  /* 和抽屉位移、主界面回位用同一个时长，两边一起走 */
+  transition: opacity 0.21s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.drawerLayerOpen {
+  pointer-events: auto;
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+.drawerLayerOpen .drawer {
+  transform: translateX(0);
+}
+
+/* 抽屉关闭时不参与宽度过渡：搜索页是全宽，退出时宽度若渐变，
+   滑出用的 translateX(-100%) 百分比会跟着变，看起来左右晃 */
+.drawerLayer:not(.drawerLayerOpen) .mobile {
+  transition: none;
+}
+
+/* 菜单打开时锁住列表滚动 */
+:global(body.dsh-menu-open) .list {
+  overflow-y: hidden;
+}
+
+/* 输入框里仍然允许选中和编辑 */
+.sider input,
+.sider textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* 全屏搜索页：抽屉铺满整宽，右侧主界面隐藏 */
+.searchMode {
+  width: 100vw;
+  max-width: 100vw;
+}
+
+/* 搜索结果加载中的骨架屏 */
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.skeletonItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.skeletonCircle {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.06);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonLines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonLine,
+.skeletonLineShort {
+  height: 12px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.06);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonLineShort {
+  width: 62%;
+  background-color: rgba(255, 255, 255, 0.045);
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 搜索页里的返回箭头：把右箭头转 180 度当左箭头用 */
+.searchBackIcon {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
+
+/* 从主界面右滑打开抽屉时，临时把抽屉层显示出来 */
+/* 拖动时整层可见（现在是 opacity 控制显隐） */
+:global(body.dsh-drawer-dragging) .drawerLayer {
+  opacity: 1;
+}
+
+/* 置顶区下方的一条分隔线：两端留白，不要太满 */
+.pinnedDivider {
+  height: 1px;
+  margin: 10px 14px 2px;
+  background-color: var(--dsw-alias-border-l1);
+}
+
+/* 手指落下时预热抽屉：不可见但先渲染好内容 */
+/* 预热只在抽屉关闭时生效，打开/拖动时不能把内容压透明 */
+:global(body.dsh-drawer-prewarm:not(.dsh-drawer-open)) .drawerLayer {
+  opacity: 0.01;
 }

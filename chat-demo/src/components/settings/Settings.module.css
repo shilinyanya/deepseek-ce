@@ -1,5 +1,6 @@
 .dialog {
   --modal-header-gap: 7px;
+  animation: settings-slide-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
   width: 760px;
   height: 500px;
   max-height: calc((100vh - 32px) / var(--ds-zoom, 1));
@@ -49,9 +50,14 @@
     flex-shrink: 0;
   }
 
-  &:hover,
   &.navItemActive {
     background-color: var(--dsw-alias-interactive-bg-hover);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: var(--dsw-alias-interactive-bg-hover);
+    }
   }
 
   &:focus-visible {
@@ -74,10 +80,12 @@
   box-sizing: border-box;
   flex-shrink: 0;
   min-height: 60px;
-  padding: 12px 0;
+  padding: 12px 14px;
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
   line-height: 22px;
+
+  border-radius: 12px;
 
   & + & {
     box-shadow: inset 0 1px 0 0 var(--dsw-alias-border-l2-darkmode-thin);
@@ -182,9 +190,14 @@
   outline: none;
   transition: background-color var(--ds-transition-duration) var(--ds-ease-in-out);
 
-  &:hover,
   &.themeOptionSelected {
     background-color: var(--dsw-specific-selector);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background-color: var(--dsw-specific-selector);
+    }
   }
 
   &:focus-visible {
@@ -193,6 +206,7 @@
 }
 
 .description {
+  white-space: pre-line;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
@@ -284,22 +298,21 @@
 
 .apiKeyInput {
   gap: 12px;
-  padding: 0 14px;
-  border-radius: 22px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
-
-  &:focus-within {
-    border-color: var(--dsw-alias-brand-primary);
-  }
 
   input {
     flex: 1;
     min-width: 0;
     height: 100%;
-    padding: 0;
-    border: none;
+    padding: 0 12px;
+    border: 1px solid var(--dsw-alias-border-l2);
+    border-radius: 12px;
+    background-color: var(--dsw-alias-bg-layer-3);
     outline: none;
+    transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+
+    &:focus {
+      border-color: var(--dsw-alias-brand-primary);
+    }
     background: transparent;
     color: var(--dsw-alias-label-primary);
     font: inherit;
@@ -311,15 +324,10 @@
   }
 }
 
-.divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 20px;
-  background-color: var(--dsw-alias-border-l2);
-}
 
-/* 「更多」分组标题：和上面的设置项拉开距离 */
+/* 「更多」分组标题：和上面的设置项拉开距离，像另一张卡片 */
 .groupTitle {
+  margin-top: 18px;
   margin-top: 8px;
   padding-top: 16px;
   border-top: 1px solid var(--dsw-alias-border-l1);
@@ -344,7 +352,20 @@
   }
 }
 
-@media not all and (min-width: 768px) {
+/* API Key 的粘贴按钮：紧挨输入框右侧 */
+.pasteButton {
+  flex-shrink: 0;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-brand-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+@media not all and (min-width: 1024px) {
   .dialog {
     align-self: flex-end;
     width: 100%;
@@ -421,13 +442,22 @@
     padding-bottom: 0;
   }
 
-  .apiKeySaved,
-  .apiKeyInput {
+  .apiKeySaved {
     height: 52px;
     padding: 0 12px 0 16px;
     border: none;
     border-radius: 40px;
     background-color: var(--dsw-specific-login-input);
+    font-size: 16px;
+  }
+
+  /* 外层只负责布局，边框/底色/圆角都由内部 input 自己画，避免一层套一层 */
+  .apiKeyInput {
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
     font-size: 16px;
   }
 
@@ -489,7 +519,7 @@
   width: 100%;
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .deleteActions > button {
     min-height: 44px;
     height: auto;
@@ -499,4 +529,268 @@
     overflow-wrap: anywhere;
     max-width: 100%;
   }
+}
+
+/* 移动端设置面板从底部滑上来，避免瞬间闪出 */
+@keyframes settings-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* 移动端设置全屏，从右侧整页滑入 */
+@media not all and (min-width: 1024px) {
+  .dialog {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    will-change: transform;
+  }
+}
+
+
+/* 位置设置的重置按钮 */
+.locationReset {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .locationReset:hover {
+    color: var(--dsw-alias-label-primary);
+  }
+}
+
+/* 系统提示词的下拉框：和位置信息一致的外观 */
+.promptSelect {
+  flex: 1 1 92px;
+  min-width: 80px;
+}
+
+/* 深色主题下把「通用设置 / 数据管理」两个 tab 的底色压深 */
+:global(body[data-ds-dark-theme]) .navItem.navItemActive {
+  background-color: rgb(38, 38, 38);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :global(body[data-ds-dark-theme]) .navItem:hover {
+    background-color: rgb(38, 38, 38);
+  }
+}
+
+/* 设置内容区一张大卡片：布局两种主题共用，颜色跟主题变量走 */
+.content {
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background-color: var(--dsw-alias-bg-layer-2);
+}
+
+.cell {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.cell + .cell {
+  box-shadow: none;
+}
+
+/* 输入框、下拉框比卡片再亮一层 */
+.cell input,
+.cell textarea,
+.cell select {
+  background-color: var(--dsw-alias-bg-layer-3);
+}
+
+/* 主题选中卡片：用柔和的中性叠加，两种主题都不会太跳 */
+.themeOption.themeOptionSelected {
+  background-color: rgba(127, 127, 127, 0.18);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .themeOption:hover {
+    background-color: rgba(127, 127, 127, 0.18);
+  }
+}
+
+/* 重置按钮文字居中 */
+.locationReset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  white-space: nowrap;
+}
+
+/* 操作按钮压窄，三个能挤在一行 */
+.cellButton {
+  flex-shrink: 0;
+  padding: 0 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* 深色三层：背景 20 / 卡片 28 / 输入框 41 */
+:global(body[data-ds-dark-theme]) .dialog {
+  background-color: rgb(20, 20, 20) !important;
+}
+
+:global(body[data-ds-dark-theme]) .content {
+  background-color: rgb(28, 28, 28);
+}
+
+:global(body[data-ds-dark-theme]) .cell input,
+:global(body[data-ds-dark-theme]) .cell textarea,
+:global(body[data-ds-dark-theme]) .cell select {
+  background-color: rgb(41, 41, 41);
+}
+
+/* 浅色三层：白底 / 浅灰卡片 / 更浅的输入框 */
+:global(body:not([data-ds-dark-theme])) .content {
+  background-color: rgb(246, 246, 247);
+}
+
+:global(body:not([data-ds-dark-theme])) .cell input,
+:global(body:not([data-ds-dark-theme])) .cell textarea,
+:global(body:not([data-ds-dark-theme])) .cell select {
+  background-color: rgb(255, 255, 255);
+}
+
+/* 占位提示字小一点，能显示得更全 */
+.cell input::placeholder,
+.cell textarea::placeholder {
+  font-size: 12px;
+}
+
+/* 删除确认弹窗：小一点，别用整页尺寸 */
+.confirmDialog {
+  width: 320px;
+  height: auto;
+  min-height: 0;
+  max-height: 60vh;
+}
+
+/* 提示词：下拉框一行，三个操作按钮一行 */
+.promptRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.promptActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* 外层圆角容器内的输入框保持透明，避免出现内外两层框 */
+/* API Key 的输入框自己画边框和底色（外层透明），避免嵌套两层 */
+.apiKeyInput input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  outline: none;
+}
+
+/* 系统提示词输入框：去掉右下角那个不起眼的拖拽手柄 */
+.cell textarea {
+  resize: none;
+}
+
+/* 独立使用的输入框（如从链接导入）自己带圆角 */
+input.apiKeyInput {
+  border-radius: 12px;
+  padding: 0 12px;
+  background-color: var(--dsw-alias-bg-layer-3);
+}
+
+.apiKeySaved,
+.apiKeyInput {
+  height: 40px;
+}
+
+/* 导入行：输入框和按钮之间留出间距 */
+.actions {
+  gap: 8px;
+}
+
+/* 设置退出：用 transition 控制 transform，WebView 上比 animation 可靠 */
+.dialog {
+  transition: transform 0.45s cubic-bezier(0.4, 0, 1, 1), opacity 0.45s ease;
+}
+
+.dialogClosing {
+  transform: translateX(100%);
+  opacity: 0;
+  animation: none !important;
+}
+
+/* 导出保存位置：两个按钮并排 */
+.folderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+/* 模型设置：说明在上、控件在下 */
+.stackedCell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.stackedRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modelSelectWide {
+  flex: 1;
+  max-width: none;
+}
+
+
+/* 标题生成：新接口/旧接口二选一 */
+.titleModeRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2, rgba(127, 127, 127, 0.12));
+}
+
+.titleModeButton {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.titleModeActive {
+  background: var(--dsw-alias-bg-layer-3, rgba(127, 127, 127, 0.2));
+  color: var(--dsw-alias-label-primary);
 }
